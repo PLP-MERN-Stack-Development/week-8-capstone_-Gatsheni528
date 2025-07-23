@@ -38,13 +38,18 @@ const messageSchema = new mongoose.Schema({
 });
 
 //Seen By
-{msg.seenBy && msg.seenBy.length > 0 && (
-  <div className="text-xs text-green-600 mt-1">
-    Seen by {msg.seenBy.length} {msg.seenBy.length === 1 ? 'user' : 'users'}
-  </div>
-)}
+router.get('/seen/:messageId', async (req, res) => {
+  try {
+    const msg = await Message.findById(req.params.messageId);
+    res.json({ seenByCount: msg.seenBy.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch seen count' });
+  }
+});
 
 
-module.exports = mongoose.model('Message', messageSchema);
+
+
+module.exports = mongoose.models.Message || mongoose.model('Message', messageSchema);
 
 module.exports = router;
