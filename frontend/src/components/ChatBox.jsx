@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import io from 'socket.io-client';
 import axios from 'axios';
 import Picker from '@emoji-mart/react';
@@ -10,7 +11,8 @@ const socket = io(import.meta.env.VITE_BACKEND_URL);
 const emojiOptions = ['👍', '❤️', '😂', '🔥', '😮'];
 const notificationSound = new Audio('/notify.mp3');
 
-const ChatBox = ({ sessionId, currentUser }) => {
+const ChatBox = ({ currentUser }) => {
+  const { sessionId } = useParams(); // dynamic route
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [file, setFile] = useState(null);
@@ -18,20 +20,22 @@ const ChatBox = ({ sessionId, currentUser }) => {
   const [typingUser, setTypingUser] = useState(null);
   const chatEndRef = useRef(null);
 
-  // Join session and set up socket listeners
+  // Join session and fetch messages
   useEffect(() => {
+    if (!sessionId || !currentUser) return;
+
     socket.emit('joinSession', sessionId);
     axios.get(`/api/chat/${sessionId}`).then((res) => setMessages(res.data));
 
-    socket.on('newMessage', (msg) => {
+    const handleNewMessage = (msg) => {
       setMessages((prev) => [...prev, msg]);
-      if (msg.sender?._id !== currentUser?._id) {
+      if (msg.sender?._id !== currentUser._id) {
         toast.info(`${msg.sender?.username || 'Someone'} sent a message`);
         notificationSound.play();
       }
-    });
+    };
 
-    socket.on('messageSeenUpdate', ({ messageId, userId }) => {
+    const handleSeenUpdate = ({ messageId, userId }) => {
       setMessages((prev) =>
         prev.map((msg) =>
           msg._id === messageId && !msg.seenBy.includes(userId)
@@ -39,17 +43,24 @@ const ChatBox = ({ sessionId, currentUser }) => {
             : msg
         )
       );
-    });
+    };
 
-    socket.on('typing', (user) => {
+    const handleTyping = (user) => {
       setTypingUser(user);
       setTimeout(() => setTypingUser(null), 2000);
-    });
+    };
+
+    socket.on('newMessage', handleNewMessage);
+    socket.on('messageSeenUpdate', handleSeenUpdate);
+    socket.on('typing', handleTyping);
 
     return () => {
       socket.emit('leaveSession', sessionId);
+      socket.off('newMessage', handleNewMessage);
+      socket.off('messageSeenUpdate', handleSeenUpdate);
+      socket.off('typing', handleTyping);
     };
-  }, [sessionId, currentUser?._id]);
+  }, [sessionId, currentUser]);
 
   // Mark last message as seen
   useEffect(() => {
@@ -62,7 +73,7 @@ const ChatBox = ({ sessionId, currentUser }) => {
     }
   }, [messages, currentUser]);
 
-  // Auto-scroll to latest message
+  // Scroll to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -72,29 +83,26 @@ const ChatBox = ({ sessionId, currentUser }) => {
 
     try {
       let msgData;
+      const headers = {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      };
 
       if (file) {
         const formData = new FormData();
         formData.append('file', file);
-
         const { data } = await axios.post(`/api/chat/upload/${sessionId}`, formData, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            ...headers,
             'Content-Type': 'multipart/form-data',
           },
         });
-
         msgData = data;
         setFile(null);
       } else {
         const { data } = await axios.post(
           `/api/chat/${sessionId}`,
           { text: message },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-          }
+          { headers }
         );
         msgData = data;
       }
@@ -103,6 +111,7 @@ const ChatBox = ({ sessionId, currentUser }) => {
       setMessage('');
     } catch (err) {
       console.error('Send error:', err);
+      toast.error('Failed to send message');
     }
   };
 
@@ -138,21 +147,27 @@ const ChatBox = ({ sessionId, currentUser }) => {
     <>
       <ToastContainer />
       <div className="p-4 bg-white shadow rounded max-w-xl w-full mx-auto h-[70vh] sm:h-[60vh] flex flex-col">
-        {/* Message display area */}
+        {/* Messages */}
         <div className="overflow-y-auto border mb-2 p-2 flex-1">
           {messages.map((msg) => (
             <div key={msg._id} className="mb-3">
               <div className="flex justify-between text-sm">
                 <span className="font-semibold">{msg.sender?.username || 'User'}:</span>
-                <span className="text-gray-400">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                <span className="text-gray-400">
+                  {new Date(msg.timestamp).toLocaleTimeString()}
+                </span>
               </div>
 
               {msg.fileUrl ? (
                 <div className="p-2 bg-gray-100 rounded">
-                  {msg.fileUrl.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                    <img src={msg.fileUrl} alt="uploaded" className="max-w-xs rounded" />
+                  {/\.(jpe?g|png|gif)$/i.test(msg.fileUrl) ? (
+                    <img src={msg.fileUrl} alt="upload" className="max-w-xs rounded" />
                   ) : (
-                    <a href={msg.fileUrl} download className="text-blue-600 underline">
+                    <a
+                      href={msg.fileUrl}
+                      download
+                      className="text-blue-600 underline"
+                    >
                       {msg.text || 'Download File'}
                     </a>
                   )}
@@ -183,7 +198,7 @@ const ChatBox = ({ sessionId, currentUser }) => {
                 ))}
               </div>
 
-              {/* Seen by */}
+              {/* Seen By */}
               {msg.seenBy?.length > 0 && (
                 <div className="text-xs text-green-600 mt-1">
                   Seen by {msg.seenBy.length} {msg.seenBy.length === 1 ? 'user' : 'users'}
@@ -201,7 +216,14 @@ const ChatBox = ({ sessionId, currentUser }) => {
 
         {/* Input controls */}
         <div className="flex items-center gap-2 relative">
-          <button onClick={() => setShowPicker((prev) => !prev)}>😊</button>
+          <button
+            type="button"
+            onClick={() => setShowPicker((prev) => !prev)}
+            className="text-xl"
+            title="Emoji Picker"
+          >
+            😊
+          </button>
 
           {showPicker && (
             <div className="absolute bottom-12 z-20">
@@ -214,8 +236,10 @@ const ChatBox = ({ sessionId, currentUser }) => {
 
           <input
             type="file"
+            accept="image/*,.pdf,.doc,.docx"
             onChange={(e) => setFile(e.target.files[0])}
             className="border rounded px-1"
+            aria-label="Upload file"
           />
 
           <input
@@ -228,6 +252,7 @@ const ChatBox = ({ sessionId, currentUser }) => {
           />
 
           <button
+            type="button"
             onClick={handleSend}
             className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
           >
