@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
 import io from 'socket.io-client';
 import axios from 'axios';
 import Picker from '@emoji-mart/react';
@@ -11,8 +10,7 @@ const socket = io(import.meta.env.VITE_BACKEND_URL);
 const emojiOptions = ['👍', '❤️', '😂', '🔥', '😮'];
 const notificationSound = new Audio('/notify.mp3');
 
-const ChatBox = ({ currentUser }) => {
-  const { sessionId } = useParams(); // dynamic route
+const ChatBox = ({ sessionId, currentUser }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [file, setFile] = useState(null);
@@ -20,7 +18,6 @@ const ChatBox = ({ currentUser }) => {
   const [typingUser, setTypingUser] = useState(null);
   const chatEndRef = useRef(null);
 
-  // Join session and fetch messages
   useEffect(() => {
     if (!sessionId || !currentUser) return;
 
@@ -62,7 +59,6 @@ const ChatBox = ({ currentUser }) => {
     };
   }, [sessionId, currentUser]);
 
-  // Mark last message as seen
   useEffect(() => {
     if (messages.length && currentUser) {
       const lastMsg = messages[messages.length - 1];
@@ -73,7 +69,6 @@ const ChatBox = ({ currentUser }) => {
     }
   }, [messages, currentUser]);
 
-  // Scroll to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -147,15 +142,12 @@ const ChatBox = ({ currentUser }) => {
     <>
       <ToastContainer />
       <div className="p-4 bg-white shadow rounded max-w-xl w-full mx-auto h-[70vh] sm:h-[60vh] flex flex-col">
-        {/* Messages */}
         <div className="overflow-y-auto border mb-2 p-2 flex-1">
           {messages.map((msg) => (
             <div key={msg._id} className="mb-3">
               <div className="flex justify-between text-sm">
                 <span className="font-semibold">{msg.sender?.username || 'User'}:</span>
-                <span className="text-gray-400">
-                  {new Date(msg.timestamp).toLocaleTimeString()}
-                </span>
+                <span className="text-gray-400">{new Date(msg.timestamp).toLocaleTimeString()}</span>
               </div>
 
               {msg.fileUrl ? (
@@ -163,11 +155,7 @@ const ChatBox = ({ currentUser }) => {
                   {/\.(jpe?g|png|gif)$/i.test(msg.fileUrl) ? (
                     <img src={msg.fileUrl} alt="upload" className="max-w-xs rounded" />
                   ) : (
-                    <a
-                      href={msg.fileUrl}
-                      download
-                      className="text-blue-600 underline"
-                    >
+                    <a href={msg.fileUrl} download className="text-blue-600 underline">
                       {msg.text || 'Download File'}
                     </a>
                   )}
@@ -176,7 +164,6 @@ const ChatBox = ({ currentUser }) => {
                 <div className="bg-gray-100 p-2 rounded">{msg.text}</div>
               )}
 
-              {/* Reactions */}
               <div className="flex gap-2 mt-1 flex-wrap">
                 {msg.reactions?.map((r, idx) => (
                   <button
@@ -198,7 +185,6 @@ const ChatBox = ({ currentUser }) => {
                 ))}
               </div>
 
-              {/* Seen By */}
               {msg.seenBy?.length > 0 && (
                 <div className="text-xs text-green-600 mt-1">
                   Seen by {msg.seenBy.length} {msg.seenBy.length === 1 ? 'user' : 'users'}
@@ -207,30 +193,16 @@ const ChatBox = ({ currentUser }) => {
             </div>
           ))}
 
-          {typingUser && (
-            <div className="text-sm text-gray-500">{typingUser.name} is typing...</div>
-          )}
-
+          {typingUser && <div className="text-sm text-gray-500">{typingUser.name} is typing...</div>}
           <div ref={chatEndRef} />
         </div>
 
-        {/* Input controls */}
         <div className="flex items-center gap-2 relative">
-          <button
-            type="button"
-            onClick={() => setShowPicker((prev) => !prev)}
-            className="text-xl"
-            title="Emoji Picker"
-          >
-            😊
-          </button>
+          <button type="button" onClick={() => setShowPicker((prev) => !prev)} className="text-xl" title="Emoji Picker">😊</button>
 
           {showPicker && (
             <div className="absolute bottom-12 z-20">
-              <Picker
-                data={data}
-                onEmojiSelect={(emoji) => setMessage((msg) => msg + emoji.native)}
-              />
+              <Picker data={data} onEmojiSelect={(emoji) => setMessage((msg) => msg + emoji.native)} />
             </div>
           )}
 
@@ -239,7 +211,6 @@ const ChatBox = ({ currentUser }) => {
             accept="image/*,.pdf,.doc,.docx"
             onChange={(e) => setFile(e.target.files[0])}
             className="border rounded px-1"
-            aria-label="Upload file"
           />
 
           <input
