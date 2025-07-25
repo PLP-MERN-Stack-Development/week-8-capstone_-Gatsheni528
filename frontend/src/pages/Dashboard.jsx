@@ -1,3 +1,4 @@
+// pages/Dashboard.jsx
 import { useEffect, useState } from 'react';
 import { fetchSessions, joinSession } from '../services/api';
 
@@ -19,7 +20,9 @@ export default function Dashboard() {
         <div key={session._id} className="border p-4 rounded mb-3">
           <h2 className="text-xl">{session.title}</h2>
           <p>{session.description}</p>
-          <button onClick={() => handleJoin(session._id)} className="btn-primary mt-2">Join</button>
+          <button onClick={() => handleJoin(session._id)} className="btn-primary mt-2">
+            Join
+          </button>
         </div>
       ))}
     </div>
