@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import ChatBox from '../components/ChatBox';
 import axios from 'axios';
 
-const SessionDetail = () => {
+const SessionDetail = ({ currentUser }) => {
   const { id } = useParams();
   const [session, setSession] = useState(null);
 
@@ -22,7 +22,7 @@ const SessionDetail = () => {
       <h1 className="text-2xl font-bold text-gray-800">{session.title}</h1>
       <p className="text-gray-600">{session.description}</p>
       <hr />
-      <ChatBox sessionId={id} />
+      <ChatBox sessionId={id} currentUser={currentUser} />
     </div>
   );
 };
