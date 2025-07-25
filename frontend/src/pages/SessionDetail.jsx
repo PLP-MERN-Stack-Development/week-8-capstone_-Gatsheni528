@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import Button from '../components/Button';
 import ChatBox from '../components/ChatBox';
 import axios from 'axios';
 
