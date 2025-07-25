@@ -16,9 +16,34 @@ export default function Login() {
   return (
     <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-10 space-y-4">
       <h2 className="text-2xl font-bold">Login to SkillHub</h2>
-      <input name="email" placeholder="Email" onChange={handleChange} className="input" />
-      <input name="password" type="password" placeholder="Password" onChange={handleChange} className="input" />
-      <button className="btn-primary">Login</button>
+
+      <div>
+        <label htmlFor="email" className="block mb-1">Email</label>
+        <input
+          type="email"
+          name="email"
+          id="email"
+          required
+          placeholder="Email"
+          onChange={handleChange}
+          className="input w-full"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="password" className="block mb-1">Password</label>
+        <input
+          type="password"
+          name="password"
+          id="password"
+          required
+          placeholder="Password"
+          onChange={handleChange}
+          className="input w-full"
+        />
+      </div>
+
+      <button type="submit" className="btn-primary w-full">Login</button>
     </form>
   );
 }
