@@ -1,5 +1,6 @@
 // pages/Dashboard.jsx
 import { useEffect, useState } from 'react';
+import Button from '../components/Button';
 import { fetchSessions, joinSession } from '../services/api';
 
 export default function Dashboard() {
